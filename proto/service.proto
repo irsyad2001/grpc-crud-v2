@@ -1,0 +1,166 @@
+// proto/service.proto
+syntax = "proto3";
+
+option go_package = "proto/crud";
+
+package crud;
+
+service CrudService {
+  rpc Create(CreateRequest) returns (CreateResponse);
+  rpc ReadAll(ReadAllRequest) returns (ReadAllResponse);
+  rpc ReadWithCategory(ReadWithCategoryRequest) returns (ReadWithCategoryResponse);
+  rpc ReadWithJenis(ReadWithJenisRequest) returns (ReadWithJenisResponse);
+  rpc ReadWithMaterial(ReadWithMaterialRequest) returns (ReadWithMaterialResponse);
+  rpc ReadWithBatch(ReadWithBatchRequest) returns (ReadWithBatchResponse);
+  rpc ReadExpiredBarang(ReadExpiredBarangRequest) returns (ReadExpiredBarangResponse);
+  rpc ReadNotExpiredBarang(ReadNotExpiredBarangRequest) returns (ReadNotExpiredBarangResponse);  
+
+  //logika update
+  rpc UpdateHargaBatch(UpdateHargaBatchRequest) returns (UpdateHargaBatchResponse);
+
+  //logika create bulk
+  rpc CreateBulkRef(CreateBulkRefRequest) returns (CreateBulkRefResponse);
+}
+
+message CreateRequest {
+  string name = 1;
+  int32 age = 2;
+}
+
+message CreateResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message ReadAllRequest {
+  //string id = 1;
+} 
+
+message ReadAllResponse {
+  repeated ResponseRead responses = 1;
+}
+
+message ResponseRead {
+  string nama_barang = 1;
+  string foto_barang = 2;
+  int32 harga = 3;
+  string nama_kategori = 4;
+  string nama_jenis = 5;
+  string no_batch = 6;
+}
+
+message ReadWithCategoryRequest{
+
+}
+
+message ReadWithCategoryResponse {
+  repeated ResponseReadCategory responses = 1;
+}
+
+message ResponseReadCategory {
+  string nama_barang = 1;
+  string foto_barang = 2;
+  int32 harga = 3;
+  string nama_kategori = 4;
+}
+
+message ReadWithJenisRequest{
+
+}
+
+message ReadWithJenisResponse {
+  repeated ResponseReadJenis responses = 1;
+}
+
+message ResponseReadJenis {
+  string nama_barang = 1;
+  string foto_barang = 2;
+  int32 harga = 3;
+  string nama_jenis = 4;
+}
+
+message ReadWithMaterialRequest{
+
+}
+
+message ReadWithMaterialResponse {
+  repeated ResponseReadMaterial responses = 1;
+}
+
+message ResponseReadMaterial {
+  string nama_barang = 1;
+  string foto_barang = 2;
+  int32 harga = 3;
+  string nama_material = 4;
+}
+
+message ReadWithBatchRequest{
+
+}
+
+message ReadWithBatchResponse {
+  repeated ResponseReadBatch responses = 1;
+}
+
+message ResponseReadBatch {
+  string nama_barang = 1;
+  string foto_barang = 2;
+  int32 harga = 3;
+  string nomor_batch = 4;
+}
+
+message ReadNotExpiredBarangRequest{
+
+}
+
+message ReadNotExpiredBarangResponse {
+  repeated ResponseReadNotExpired responses = 1;
+}
+
+message ResponseReadNotExpired {
+  string nama_barang = 1;
+  string nomor_batch = 2;
+  int32 stok = 3;
+  string tgl_expired = 4;
+}
+
+message ReadExpiredBarangRequest{
+
+}
+
+message ReadExpiredBarangResponse {
+  repeated ResponseReadExpired responses = 1;
+}
+
+message ResponseReadExpired {
+  string nama_barang = 1;
+  string nomor_batch = 2;
+  int32 stok = 3;
+  string tgl_expired = 4;
+}
+
+message UpdateHargaBatchRequest{
+  int32 harga = 1;
+  string nomor_batch = 2;
+}
+
+message UpdateHargaBatchResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message CreateBulkRefRequest {
+  repeated CreateBulkRef data = 1;
+}
+
+message CreateBulkRefResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message CreateBulkRef {
+  string id_barang = 1;
+  string stok = 2;
+  string exp_date = 3;
+  string no_batch = 4;
+}
