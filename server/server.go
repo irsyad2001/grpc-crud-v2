@@ -66,9 +66,12 @@ func measureResponseSizeInterceptor() grpc.UnaryServerInterceptor {
 }
 
 func (s *server) ReadAll(ctx context.Context, req *crud.ReadAllRequest) (*crud.ReadAllResponse, error) {
+
+	//iki lak ser gae cpu ne mbi waktu response jo lali fungsine dicopas sisan
 	startTime := time.Now()
 	cpuStart := getCurrentCPUUsage()
-
+	//akhire iki
+	
 	rows, err := s.db.Query("SELECT b.nama_barang, b.foto_barang, b.harga, k.nama_kategori, j.nama_jenis, rb.no_batch FROM ref_barang rb INNER JOIN barang b ON rb.id_barang = b.id_barang INNER JOIN kategori k ON b.id_kategori = k.id_kategori INNER JOIN material m ON b.id_material = m.id_material INNER JOIN jenis j ON b.id_jenis = j.id_jenis")
 	if err != nil {
 		return nil, err
@@ -76,7 +79,10 @@ func (s *server) ReadAll(ctx context.Context, req *crud.ReadAllRequest) (*crud.R
 	defer rows.Close()
 
 	var responses []*crud.ResponseRead
+
+	//iki dicopas gae memorine
 	var totalMemorySize int
+
 	for rows.Next() {
 		var namaBarang, fotoBarang, namaKategori, namaJenis, noBatch string
 		var harga string
@@ -99,18 +105,25 @@ func (s *server) ReadAll(ctx context.Context, req *crud.ReadAllRequest) (*crud.R
 			NamaJenis:    namaJenis,
 			NoBatch:      noBatch,
 		}
+		//iki gae per objek e temporary gae fungsi calculateMemorySize ( jo lali fungsine dicopas sisan )
 		responseMemorySize := calculateMemorySize(response)
+		
+		//iki gae ngitung gae objek e
 		totalMemorySize += responseMemorySize
 		responses = append(responses, response)
 	}
 
+	//iki lak ser copas cpu mbi waktu response
 	cpuEnd := getCurrentCPUUsage()
 
 	duration := time.Since(startTime)
 	cpuUsage := cpuEnd - cpuStart
+	//sampek iki
 
+	//iki log e gae memori ne
 	log.Printf("Total ukuran memori respons: %d bytes", totalMemorySize)
-	// Log atau lakukan sesuatu dengan informasi penggunaan CPU
+
+	// iki log gae waktu eksekusi ne mbi cpu ne
 	log.Printf("Durasi eksekusi: %v, Penggunaan CPU: %f\n", duration, cpuUsage)
 
 	if err := rows.Err(); err != nil {
