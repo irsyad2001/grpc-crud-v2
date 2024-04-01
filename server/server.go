@@ -12,9 +12,9 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/grpc-ecosystem/go-grpc-middleware"
-	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
-	"github.com/grpc-ecosystem/go-grpc-middleware/tags"
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
+	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
 	"go.uber.org/zap"
 
 	"runtime"
@@ -65,13 +65,23 @@ func measureResponseSizeInterceptor() grpc.UnaryServerInterceptor {
 	}
 }
 
+func calculateMemorySize(obj interface{}) int {
+	// Marshal objek menjadi JSON
+	jsonData, err := json.Marshal(obj)
+	if err != nil {
+		log.Printf("Failed to marshal object: %v", err)
+		return 0
+	}
+
+	// Menghitung panjang byte dari JSON
+	return len(jsonData)
+}
+
 func (s *server) ReadAll(ctx context.Context, req *crud.ReadAllRequest) (*crud.ReadAllResponse, error) {
 
-	//iki lak ser gae cpu ne mbi waktu response jo lali fungsine dicopas sisan
 	startTime := time.Now()
 	cpuStart := getCurrentCPUUsage()
-	//akhire iki
-	
+
 	rows, err := s.db.Query("SELECT b.nama_barang, b.foto_barang, b.harga, k.nama_kategori, j.nama_jenis, rb.no_batch FROM ref_barang rb INNER JOIN barang b ON rb.id_barang = b.id_barang INNER JOIN kategori k ON b.id_kategori = k.id_kategori INNER JOIN material m ON b.id_material = m.id_material INNER JOIN jenis j ON b.id_jenis = j.id_jenis")
 	if err != nil {
 		return nil, err
@@ -80,7 +90,6 @@ func (s *server) ReadAll(ctx context.Context, req *crud.ReadAllRequest) (*crud.R
 
 	var responses []*crud.ResponseRead
 
-	//iki dicopas gae memorine
 	var totalMemorySize int
 
 	for rows.Next() {
@@ -107,23 +116,18 @@ func (s *server) ReadAll(ctx context.Context, req *crud.ReadAllRequest) (*crud.R
 		}
 		//iki gae per objek e temporary gae fungsi calculateMemorySize ( jo lali fungsine dicopas sisan )
 		responseMemorySize := calculateMemorySize(response)
-		
+
 		//iki gae ngitung gae objek e
 		totalMemorySize += responseMemorySize
 		responses = append(responses, response)
 	}
 
-	//iki lak ser copas cpu mbi waktu response
 	cpuEnd := getCurrentCPUUsage()
 
 	duration := time.Since(startTime)
 	cpuUsage := cpuEnd - cpuStart
-	//sampek iki
 
-	//iki log e gae memori ne
 	log.Printf("Total ukuran memori respons: %d bytes", totalMemorySize)
-
-	// iki log gae waktu eksekusi ne mbi cpu ne
 	log.Printf("Durasi eksekusi: %v, Penggunaan CPU: %f\n", duration, cpuUsage)
 
 	if err := rows.Err(); err != nil {
@@ -131,18 +135,6 @@ func (s *server) ReadAll(ctx context.Context, req *crud.ReadAllRequest) (*crud.R
 	}
 
 	return &crud.ReadAllResponse{Responses: responses}, nil
-}
-
-func calculateMemorySize(obj interface{}) int {
-	// Marshal objek menjadi JSON
-	jsonData, err := json.Marshal(obj)
-	if err != nil {
-		log.Printf("Failed to marshal object: %v", err)
-		return 0
-	}
-
-	// Menghitung panjang byte dari JSON
-	return len(jsonData)
 }
 
 func (s *server) ReadWithCategory(ctx context.Context, req *crud.ReadWithCategoryRequest) (*crud.ReadWithCategoryResponse, error) {
@@ -155,6 +147,9 @@ func (s *server) ReadWithCategory(ctx context.Context, req *crud.ReadWithCategor
 	defer rows.Close()
 
 	var responses []*crud.ResponseReadCategory
+
+	var totalMemorySize int
+
 	for rows.Next() {
 		var namaBarang, fotoBarang, namaKategori string
 		var harga string
@@ -174,6 +169,9 @@ func (s *server) ReadWithCategory(ctx context.Context, req *crud.ReadWithCategor
 			Harga:        int32(hargaInt),
 			NamaKategori: namaKategori,
 		}
+
+		responseMemorySize := calculateMemorySize(response)
+		totalMemorySize += responseMemorySize
 		responses = append(responses, response)
 	}
 
@@ -183,6 +181,7 @@ func (s *server) ReadWithCategory(ctx context.Context, req *crud.ReadWithCategor
 	cpuUsage := cpuEnd - cpuStart
 
 	// Log atau lakukan sesuatu dengan informasi penggunaan CPU
+	log.Printf("Total ukuran memori respons: %d bytes", totalMemorySize)
 	log.Printf("Durasi eksekusi: %v, Penggunaan CPU: %f\n", duration, cpuUsage)
 
 	if err := rows.Err(); err != nil {
@@ -202,6 +201,9 @@ func (s *server) ReadWithJenis(ctx context.Context, req *crud.ReadWithJenisReque
 	defer rows.Close()
 
 	var responses []*crud.ResponseReadJenis
+
+	var totalMemorySize int
+
 	for rows.Next() {
 		var namaBarang, fotoBarang, namaJenis string
 		var harga string
@@ -221,6 +223,9 @@ func (s *server) ReadWithJenis(ctx context.Context, req *crud.ReadWithJenisReque
 			Harga:      int32(hargaInt),
 			NamaJenis:  namaJenis,
 		}
+
+		responseMemorySize := calculateMemorySize(response)
+		totalMemorySize += responseMemorySize
 		responses = append(responses, response)
 	}
 
@@ -230,6 +235,7 @@ func (s *server) ReadWithJenis(ctx context.Context, req *crud.ReadWithJenisReque
 	cpuUsage := cpuEnd - cpuStart
 
 	// Log atau lakukan sesuatu dengan informasi penggunaan CPU
+	log.Printf("Total ukuran memori respons: %d bytes", totalMemorySize)
 	log.Printf("Durasi eksekusi: %v, Penggunaan CPU: %f\n", duration, cpuUsage)
 
 	if err := rows.Err(); err != nil {
@@ -248,6 +254,9 @@ func (s *server) ReadWithMaterial(ctx context.Context, req *crud.ReadWithMateria
 	}
 	defer rows.Close()
 	var responses []*crud.ResponseReadMaterial
+
+	var totalMemorySize int
+
 	for rows.Next() {
 		var namaBarang, fotoBarang, namaMaterial string
 		var harga string
@@ -268,6 +277,8 @@ func (s *server) ReadWithMaterial(ctx context.Context, req *crud.ReadWithMateria
 			Harga:        int32(hargaInt),
 			NamaMaterial: namaMaterial,
 		}
+		responseMemorySize := calculateMemorySize(response)
+		totalMemorySize += responseMemorySize
 		responses = append(responses, response)
 	}
 
@@ -277,6 +288,7 @@ func (s *server) ReadWithMaterial(ctx context.Context, req *crud.ReadWithMateria
 	cpuUsage := cpuEnd - cpuStart
 
 	// Log atau lakukan sesuatu dengan informasi penggunaan CPU
+	log.Printf("Total ukuran memori respons: %d bytes", totalMemorySize)
 	log.Printf("Durasi eksekusi: %v, Penggunaan CPU: %f\n", duration, cpuUsage)
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -295,6 +307,9 @@ func (s *server) ReadWithBatch(ctx context.Context, req *crud.ReadWithBatchReque
 	defer rows.Close()
 
 	var responses []*crud.ResponseReadBatch
+
+	var totalMemorySize int
+
 	for rows.Next() {
 		var namaBarang, fotoBarang, NoBatch string
 		var harga string
@@ -313,6 +328,8 @@ func (s *server) ReadWithBatch(ctx context.Context, req *crud.ReadWithBatchReque
 			Harga:      int32(hargaInt),
 			NomorBatch: NoBatch,
 		}
+		responseMemorySize := calculateMemorySize(response)
+		totalMemorySize += responseMemorySize
 		responses = append(responses, response)
 	}
 
@@ -322,6 +339,7 @@ func (s *server) ReadWithBatch(ctx context.Context, req *crud.ReadWithBatchReque
 	cpuUsage := cpuEnd - cpuStart
 
 	// Log atau lakukan sesuatu dengan informasi penggunaan CPU
+	log.Printf("Total ukuran memori respons: %d bytes", totalMemorySize)
 	log.Printf("Durasi eksekusi: %v, Penggunaan CPU: %f\n", duration, cpuUsage)
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -340,6 +358,8 @@ func (s *server) ReadExpiredBarang(ctx context.Context, req *crud.ReadExpiredBar
 	defer rows.Close()
 
 	var responses []*crud.ResponseReadExpired
+
+	var totalMemorySize int
 
 	for rows.Next() {
 		var namaBarang, stok, NoBatch, tglExpired string
@@ -360,6 +380,8 @@ func (s *server) ReadExpiredBarang(ctx context.Context, req *crud.ReadExpiredBar
 			Stok:       int32(stokInt),
 			TglExpired: tglExpired,
 		}
+		responseMemorySize := calculateMemorySize(response)
+		totalMemorySize += responseMemorySize
 		responses = append(responses, response)
 	}
 	cpuEnd := getCurrentCPUUsage()
@@ -368,6 +390,7 @@ func (s *server) ReadExpiredBarang(ctx context.Context, req *crud.ReadExpiredBar
 	cpuUsage := cpuEnd - cpuStart
 
 	// Log atau lakukan sesuatu dengan informasi penggunaan CPU
+	log.Printf("Total ukuran memori respons: %d bytes", totalMemorySize)
 	log.Printf("Durasi eksekusi: %v, Penggunaan CPU: %f\n", duration, cpuUsage)
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -385,6 +408,8 @@ func (s *server) ReadNotExpiredBarang(ctx context.Context, req *crud.ReadNotExpi
 	}
 	defer rows.Close()
 	var responses []*crud.ResponseReadNotExpired
+
+	var totalMemorySize int
 
 	for rows.Next() {
 		var namaBarang, stok, NoBatch, tglExpired string
@@ -405,6 +430,8 @@ func (s *server) ReadNotExpiredBarang(ctx context.Context, req *crud.ReadNotExpi
 			Stok:       int32(stokInt),
 			TglExpired: tglExpired,
 		}
+		responseMemorySize := calculateMemorySize(response)
+		totalMemorySize += responseMemorySize
 		responses = append(responses, response)
 	}
 
@@ -414,6 +441,7 @@ func (s *server) ReadNotExpiredBarang(ctx context.Context, req *crud.ReadNotExpi
 	cpuUsage := cpuEnd - cpuStart
 
 	// Log atau lakukan sesuatu dengan informasi penggunaan CPU
+	log.Printf("Total ukuran memori respons: %d bytes", totalMemorySize)
 	log.Printf("Durasi eksekusi: %v, Penggunaan CPU: %f\n", duration, cpuUsage)
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -442,6 +470,7 @@ func (s *server) UpdateHargaBatch(ctx context.Context, req *crud.UpdateHargaBatc
 func (s *server) CreateBulkRef(ctx context.Context, req *crud.CreateBulkRefRequest) (*crud.CreateBulkRefResponse, error) {
 	startTime := time.Now()
 	cpuStart := getCurrentCPUUsage()
+
 	query := "INSERT INTO `ref_barang` (`id_ref_barang`, `id_barang`, `stok`, `expired`, `no_batch`, `created_date`) VALUES (NULL,?,?,?,?, current_timestamp());"
 
 	tx, err := s.db.Begin()
@@ -469,6 +498,7 @@ func (s *server) CreateBulkRef(ctx context.Context, req *crud.CreateBulkRefReque
 		if err != nil {
 			return nil, err
 		}
+		
 	}
 
 	cpuEnd := getCurrentCPUUsage()
